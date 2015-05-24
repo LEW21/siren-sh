@@ -1,0 +1,155 @@
+#!/bin/sh
+set -e
+
+if [ $(basename "$0") = "siren" ]
+then
+	if [ -n "$1" ]
+	then
+		case "$1" in
+			build)
+				if [ -n "$2" ]
+				then
+					path=$2
+				else
+					path="."
+				fi
+				$path/build.sh
+				exit $? ;;
+			tag)
+				./siren-tag $2 $3
+				exit $? ;;
+			spawn)
+				./siren-spawn $2
+				exit $? ;;
+		esac
+	fi
+	echo "Usage: $0 build/tag/spawn"
+	exit 1
+fi
+
+USE_COMPACT=y
+#USE_COMPACT=
+
+BUILD_COMPACT=$USE_COMPACT
+
+src=$( cd "$( dirname "$0" )" && pwd )
+cd $src
+
+id=""
+base=""
+
+function ID {
+	name=$1
+	version=$2
+
+	id=$name-$version
+	root=/var/lib/machines/$id
+
+	mkdir -m 0755 -p $root
+
+	# Enable ID <-> FROM reversal
+	if [ -n "$base" ]
+	then
+		__mount
+	fi
+}
+
+function FROM {
+	base=$1
+	if [ ! -d /var/lib/machines/$base ]
+	then
+		echo "Base not found: $base"
+		exit 1
+	fi
+	base_overlay=$(cat /var/lib/machines/$base/overlay)
+	base_version=$(cat /var/lib/machines/$base/version)
+
+	# Enable ID <-> FROM reversal
+	if [ -n "$id" ]
+	then
+		__mount
+	fi
+}
+
+function RUN {
+	systemd-nspawn -M $id $@
+}
+
+function ENABLE {
+	RUN systemctl enable $1
+}
+
+storeargs() {
+	printf "%q " "$@"
+}
+
+function SET {
+	echo $2 > $root/$1
+}
+
+function CMD {
+	storeargs exec "$@" > $root/run.sh
+	chmod u+x $root/run.sh
+}
+
+function __cleanup_systemd {
+	if [ "$(ls -A $root/etc/systemd/system)" ]
+	then
+		cp -r $root/etc/systemd/system/* $root/usr/lib/systemd/system/
+		rm -rf $root/etc/systemd/system
+	fi
+}
+
+function __mount {
+	cd /var/lib/machines
+	mkdir -p .work
+	if [ -n "$USE_COMPACT" ]
+	then
+		mount -t overlay overlay -olowerdir=$base.compact,upperdir=$id,workdir=.work $id
+	else
+		mount -t overlay overlay -olowerdir=$base_overlay,upperdir=$id,workdir=.work $id
+	fi
+	cd $src
+}
+
+function __umount {
+	if (mount | grep "overlay on $root type overlay")
+	then
+		umount $root
+	fi
+}
+
+function __compact {
+	rm -rf $root.compact
+
+	if [ -n "$base" ]
+	then
+		mkdir -p $root.compact
+		cp -r --reflink /var/lib/machines/$base.compact/* $root.compact
+		cp -r --reflink $root/* $root.compact
+	else
+		ln -s $id $root.compact
+	fi
+}
+
+function __save_settings {
+	echo $version > $root/version
+	if [ -n "$base" ]
+	then
+		echo $base_overlay:$id > $root/overlay
+	else
+		echo $id > $root/overlay
+	fi
+}
+
+function __atEXIT {
+	__umount
+	__cleanup_systemd
+	__save_settings
+	if [ -n "$BUILD_COMPACT" ]
+	then
+		__compact
+	fi
+}
+
+trap __atEXIT EXIT
