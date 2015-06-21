@@ -18,3 +18,8 @@ RUN pacman -Syu --noconfirm
 RUN locale-gen
 
 ENABLE systemd-networkd
+
+# Not necessary, makes container smaller.
+rm $root/etc/mtab
+ln -s ../proc/self/mounts $root/etc/mtab
+ln -s ../usr/lib/os-release $root/etc/os-release
