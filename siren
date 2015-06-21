@@ -6,7 +6,60 @@ USE_COMPACT=
 
 BUILD_COMPACT=$USE_COMPACT
 
-mkdir -p /var/lib/siren/.work
+WORKDIR=/var/lib/siren/.work
+
+mkdir -p $WORKDIR
+
+function mount_f {
+	what=$1
+	where=$2
+	type=$3
+	options=$4
+
+	echo "mount -t $type -o$options $what $where"
+	#mount -t $type -o$options $what $where
+
+	sdname=$(systemd-escape -p $where || true)
+	sdfile="[Mount]\nWhat=$what\nWhere=$where\nType=$type\nOptions=$options\n"
+	sdauto="[Automount]\nWhere=$where\n\n[Install]\nWantedBy=local-fs.target\n"
+
+	printf "$sdfile" > /etc/systemd/system/$sdname.mount
+	printf "$sdauto" > /etc/systemd/system/$sdname.automount
+	systemctl daemon-reload
+	systemctl enable --now "$sdname.automount"
+	systemctl restart "$sdname.mount"
+}
+
+function mount_overlay {
+	_what_ro=$1
+	_what_rw=$2
+	_where=$3
+
+	if [ -n "$_what_rw" ]
+	then
+		if [ -n "$_what_ro" ]
+		then
+			mount_f overlay $_where overlay lowerdir=$_what_ro,upperdir=$_what_rw,workdir=$WORKDIR
+		else
+			mount_f $_what_rw $_where none bind
+		fi
+	else
+		if [[ $_what_ro == *":"* ]]
+		then
+			mount_f overlay $_where overlay lowerdir=$_what_ro
+		else
+			mount_f $_what_ro $_where none bind,ro # Note: ro probably doesnt' work
+		fi
+	fi
+}
+
+function umount_f {
+	where=$1
+
+	sdname=$(systemd-escape -p $where || true)
+
+	systemctl stop $sdname.mount
+}
 
 function _mount {
 	_base=$1
@@ -22,42 +75,37 @@ function _mount {
 		_id=$_base
 	fi
 
+	_sroot=/var/lib/siren/$_id
 	_root=/var/lib/machines/$_id
 
-	cd /var/lib/siren
-	mkdir -p $_id
-	mkdir -p /var/lib/machines/$_id
+	mkdir -p $_sroot $_root
 
 	if [ -n "$_base" ]
 	then
-		_base_overlay=$(cat /var/lib/siren/$_base/overlay)
-		if [ -n "$_cont" ]
+		if [ -n "$USE_COMPACT" ]
 		then
-			if [ -n "$USE_COMPACT" ]
-			then
-				mount -t overlay overlay -olowerdir=$_base.compact,upperdir=$_id,workdir=.work $_root
-			else
-				echo "mount -t overlay overlay -olowerdir=$_base_overlay,upperdir=$_id,workdir=.work $_root"
-				mount -t overlay overlay -olowerdir=$_base_overlay,upperdir=$_id,workdir=.work $_root
-			fi
+			_what_ro=/var/lib/siren/$_base.compact
 		else
-			if [ -n "$USE_COMPACT" ]
-			then
-				mount -B $_base.compact $_id && mount -o remount,ro $_root
-			else
-				# TODO check for : in $base_overlay, and use mount -B if there is none.
-				echo "mount -t overlay overlay -olowerdir=$_base_overlay $_root"
-				mount -t overlay overlay -olowerdir=$_base_overlay $_root
-			fi
+			_what_ro=$(cat /var/lib/siren/$_base/overlay)
+			_what_ro=/var/lib/siren/${_what_ro//:/:\/var\/lib\/siren\/}
 		fi
 	else
-		if [ -n "$_cont" ]
-		then
-			mount -B $_id $_root
-		else
-			echo "You need a base or a container name."
-			exit 1
-		fi
+		_what_ro=""
+	fi
+
+	if [ -n "$_cont" ]
+	then
+		_what_rw=/var/lib/siren/$_cont
+	else
+		_what_rw=""
+	fi
+
+	if [ -n "$_what_ro$_what_rw" ]
+	then
+		mount_overlay "$_what_ro" "$_what_rw" $_root
+	else
+		echo "You need a base or a container name."
+		exit 1
 	fi
 }
 
@@ -76,24 +124,26 @@ then
 				$path/build.sh
 				exit $? ;;
 			tag)
-				rm /var/lib/siren/$3
+				rm -f /var/lib/siren/$3
 				ln -s $2 /var/lib/siren/$3
+				rm -f /var/lib/machines/$3
+				ln -s $2 /var/lib/machines/$3
 				if [ -n "$BUILD_COMPACT" ]
 				then
-					rm /var/lib/siren/$3.compact
+					rm -f /var/lib/siren/$3.compact
 					ln -s $2.compact /var/lib/siren/$3.compact
+					rm -f /var/lib/machines/$3.compact
+					ln -s $2.compact /var/lib/machines/$3.compact
 				fi
 				exit 0 ;;
-			mount)
-				_mount "$2" "$3"
-
-				exit 0 ;;
-			umount)
-				umount /var/lib/machines/$2
+			new) # New container
+				_id=$2
+				_base=$3
+				_mount "$_base" "$_id"
 				exit 0 ;;
 		esac
 	fi
-	echo "Usage: $0 build/tag/mount/umount"
+	echo "Usage: $0 build/tag/new"
 	exit 1
 fi
 
@@ -155,7 +205,7 @@ function CMD {
 }
 
 function __cleanup_systemd {
-	if [ "$(ls -A $sroot/etc/systemd/system || true)" ]
+	if [ "$(ls -A $sroot/etc/systemd/system 2>/dev/null || true)" ]
 	then
 		cp -r $sroot/etc/systemd/system/* $sroot/usr/lib/systemd/system/
 		rm -rf $sroot/etc/systemd/system
@@ -163,18 +213,11 @@ function __cleanup_systemd {
 }
 
 function __mount {
-	__umount
-
 	_mount "$base" "$id"
-
-	cd $src
 }
 
 function __umount {
-	if (mount | grep " on $root type ")
-	then
-		umount $root
-	fi
+	umount_f "$root"
 }
 
 function __compact {
