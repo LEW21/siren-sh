@@ -1,3 +1,0 @@
-#!/bin/sh
-ln -s $1 /var/lib/machines/$2
-ln -s $1.compact /var/lib/machines/$2.compact
