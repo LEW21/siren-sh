@@ -6,6 +6,61 @@ USE_COMPACT=
 
 BUILD_COMPACT=$USE_COMPACT
 
+mkdir -p /var/lib/siren/.work
+
+function _mount {
+	_base=$1
+	_cont=$2
+
+	echo "BASE: $_base"
+	echo "CONT: $_cont"
+
+	if [ -n "$_cont" ]
+	then
+		_id=$_cont
+	else
+		_id=$_base
+	fi
+
+	_root=/var/lib/machines/$_id
+
+	cd /var/lib/siren
+	mkdir -p $_id
+	mkdir -p /var/lib/machines/$_id
+
+	if [ -n "$_base" ]
+	then
+		_base_overlay=$(cat /var/lib/siren/$_base/overlay)
+		if [ -n "$_cont" ]
+		then
+			if [ -n "$USE_COMPACT" ]
+			then
+				mount -t overlay overlay -olowerdir=$_base.compact,upperdir=$_id,workdir=.work $_root
+			else
+				echo "mount -t overlay overlay -olowerdir=$_base_overlay,upperdir=$_id,workdir=.work $_root"
+				mount -t overlay overlay -olowerdir=$_base_overlay,upperdir=$_id,workdir=.work $_root
+			fi
+		else
+			if [ -n "$USE_COMPACT" ]
+			then
+				mount -B $_base.compact $_id && mount -o remount,ro $_root
+			else
+				# TODO check for : in $base_overlay, and use mount -B if there is none.
+				echo "mount -t overlay overlay -olowerdir=$_base_overlay $_root"
+				mount -t overlay overlay -olowerdir=$_base_overlay $_root
+			fi
+		fi
+	else
+		if [ -n "$_cont" ]
+		then
+			mount -B $_id $_root
+		else
+			echo "You need a base or a container name."
+			exit 1
+		fi
+	fi
+}
+
 if [ $(basename "$0") = "siren" ]
 then
 	if [ -n "$1" ]
@@ -21,46 +76,22 @@ then
 				$path/build.sh
 				exit $? ;;
 			tag)
-				ln -s $2 /var/lib/machines/$3
+				ln -s $2 /var/lib/siren/$3
 				if [ -n "$BUILD_COMPACT" ]
 				then
-					ln -s $2.compact /var/lib/machines/$3.compact
+					ln -s $2.compact /var/lib/siren/$3.compact
 				fi
 				exit 0 ;;
-			prepare)
-				base=$2
-				cont=$3
-				base_overlay=$(cat /var/lib/machines/$base/overlay)
-				cd /var/lib/machines
-				if [ -n "$cont" ]
-				then
-					id=$cont
-					mkdir -p $id
-					if [ -n "$USE_COMPACT" ]
-					then
-						mount -t overlay overlay -olowerdir=$base.compact,upperdir=$id,workdir=.work $id
-					else
-						mount -t overlay overlay -olowerdir=$base_overlay,upperdir=$id,workdir=.work $id
-					fi
-				else
-					id=$base
-					if [ -n "$USE_COMPACT" ]
-					then
-						mount -B $base.compact $id && mount -o remount,ro $id
-					else
-						# TODO check for : in $base_overlay, and use mount -B if there is none.
-						echo "mount -t overlay overlay -olowerdir=$base_overlay $id"
-						mount -t overlay overlay -olowerdir=$base_overlay $id
-					fi
-				fi
+			mount)
+				_mount "$2" "$3"
+
 				exit 0 ;;
-			unprepare)
-				cd /var/lib/machines
-				umount $2
+			umount)
+				umount /var/lib/machines/$2
 				exit 0 ;;
 		esac
 	fi
-	echo "Usage: $0 build/tag/prepare/unprepare"
+	echo "Usage: $0 build/tag/mount/umount"
 	exit 1
 fi
 
@@ -76,25 +107,22 @@ function ID {
 
 	id=$name-$version
 	root=/var/lib/machines/$id
+	sroot=/var/lib/siren/$id
 
 	mkdir -m 0755 -p $root
 
-	# Enable ID <-> FROM reversal
-	if [ -n "$base" ]
-	then
-		__mount
-	fi
+	__mount
 }
 
 function FROM {
 	base=$1
-	if [ ! -d /var/lib/machines/$base ]
+	if [ ! -d /var/lib/siren/$base ]
 	then
 		echo "Base not found: $base"
 		exit 1
 	fi
-	base_overlay=$(cat /var/lib/machines/$base/overlay)
-	base_version=$(cat /var/lib/machines/$base/version)
+	base_overlay=$(cat /var/lib/siren/$base/overlay)
+	base_version=$(cat /var/lib/siren/$base/version)
 
 	# Enable ID <-> FROM reversal
 	if [ -n "$id" ]
@@ -125,52 +153,48 @@ function CMD {
 }
 
 function __cleanup_systemd {
-	if [ "$(ls -A $root/etc/systemd/system)" ]
+	if [ "$(ls -A $sroot/etc/systemd/system || true)" ]
 	then
-		cp -r $root/etc/systemd/system/* $root/usr/lib/systemd/system/
-		rm -rf $root/etc/systemd/system
+		cp -r $sroot/etc/systemd/system/* $sroot/usr/lib/systemd/system/
+		rm -rf $sroot/etc/systemd/system
 	fi
 }
 
 function __mount {
-	cd /var/lib/machines
-	mkdir -p .work
-	if [ -n "$USE_COMPACT" ]
-	then
-		mount -t overlay overlay -olowerdir=$base.compact,upperdir=$id,workdir=.work $id
-	else
-		mount -t overlay overlay -olowerdir=$base_overlay,upperdir=$id,workdir=.work $id
-	fi
+	__umount
+
+	_mount "$base" "$id"
+
 	cd $src
 }
 
 function __umount {
-	if (mount | grep "overlay on $root type overlay")
+	if (mount | grep " on $root type ")
 	then
 		umount $root
 	fi
 }
 
 function __compact {
-	rm -rf $root.compact
+	rm -rf $sroot.compact
 
 	if [ -n "$base" ]
 	then
-		mkdir -p $root.compact
-		cp -r --reflink /var/lib/machines/$base.compact/* $root.compact
-		cp -r --reflink $root/* $root.compact
+		mkdir -p $sroot.compact
+		cp -r --reflink /var/lib/siren/$base.compact/* $sroot.compact
+		cp -r --reflink $sroot/* $sroot.compact
 	else
-		ln -s $id $root.compact
+		ln -s $id $sroot.compact
 	fi
 }
 
 function __save_settings {
-	echo $version > $root/version
+	echo $version > $sroot/version
 	if [ -n "$base" ]
 	then
-		echo $base_overlay:$id > $root/overlay
+		echo $base_overlay:$id > $sroot/overlay
 	else
-		echo $id > $root/overlay
+		echo $id > $sroot/overlay
 	fi
 }
 
