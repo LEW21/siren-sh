@@ -2,7 +2,7 @@
 . `dirname $0`/siren
 
 #ID arch `date +%Y.%m.%d`
-ID arch 2015.05.23
+ID arch 2015.06.21
 
 mkdir -m 0755 -p $root/var/{cache/pacman/pkg,lib/pacman,log} $root/{dev,run,etc}
 mkdir -m 1777 -p $root/tmp
