@@ -30,6 +30,14 @@ function mount_f {
 	systemctl restart "$sdname.mount"
 }
 
+function umount_f {
+	where=$1
+
+	sdname=$(systemd-escape -p $where || true)
+
+	systemctl stop $sdname.mount
+}
+
 function mount_overlay {
 	_what_ro=$1
 	_what_rw=$2
@@ -53,60 +61,33 @@ function mount_overlay {
 	fi
 }
 
-function umount_f {
-	where=$1
+function __mount {
+	echo "ID $id"
+	echo "FROM $base"
 
-	sdname=$(systemd-escape -p $where || true)
-
-	systemctl stop $sdname.mount
-}
-
-function _mount {
-	_base=$1
-	_cont=$2
-
-	echo "BASE: $_base"
-	echo "CONT: $_cont"
-
-	if [ -n "$_cont" ]
-	then
-		_id=$_cont
-	else
-		_id=$_base
-	fi
-
-	_sroot=/var/lib/siren/$_id
-	_root=/var/lib/machines/$_id
+	_sroot=/var/lib/siren/$id
+	_root=/var/lib/machines/$id
 
 	mkdir -p $_sroot $_root
 
-	if [ -n "$_base" ]
+	if [ -n "$base" ]
 	then
 		if [ -n "$USE_COMPACT" ]
 		then
-			_what_ro=/var/lib/siren/$_base.compact
+			_overlay=/var/lib/siren/$base.compact
 		else
-			_what_ro=$(cat /var/lib/siren/$_base/overlay)
-			_what_ro=/var/lib/siren/${_what_ro//:/:\/var\/lib\/siren\/}
+			_overlay=$(cat /var/lib/siren/$base/overlay)
+			_overlay=/var/lib/siren/${_overlay//:/:\/var\/lib\/siren\/}
 		fi
 	else
-		_what_ro=""
+		_overlay=""
 	fi
 
-	if [ -n "$_cont" ]
-	then
-		_what_rw=/var/lib/siren/$_cont
-	else
-		_what_rw=""
-	fi
+	mount_overlay "$_overlay" "$_sroot" $_root
+}
 
-	if [ -n "$_what_ro$_what_rw" ]
-	then
-		mount_overlay "$_what_ro" "$_what_rw" $_root
-	else
-		echo "You need a base or a container name."
-		exit 1
-	fi
+function __umount {
+	umount_f "$root"
 }
 
 if [ $(basename "$0") = "siren" ]
@@ -137,9 +118,9 @@ then
 				fi
 				exit 0 ;;
 			new) # New container
-				_id=$2
-				_base=$3
-				_mount "$_base" "$_id"
+				id=$2
+				base=$3
+				__mount
 				exit 0 ;;
 		esac
 	fi
@@ -191,12 +172,12 @@ function ENABLE {
 	RUN systemctl enable $1
 }
 
-storeargs() {
-	printf "%q " "$@"
-}
-
 function SET {
 	echo $2 > $root/$1
+}
+
+storeargs() {
+	printf "%q " "$@"
 }
 
 function CMD {
@@ -212,12 +193,14 @@ function __cleanup_systemd {
 	fi
 }
 
-function __mount {
-	_mount "$base" "$id"
-}
-
-function __umount {
-	umount_f "$root"
+function __save_settings {
+	echo $version > $sroot/version
+	if [ -n "$base" ]
+	then
+		echo $base_overlay:$id > $sroot/overlay
+	else
+		echo $id > $sroot/overlay
+	fi
 }
 
 function __compact {
@@ -230,16 +213,6 @@ function __compact {
 		cp -r --reflink $sroot/* $sroot.compact
 	else
 		ln -s $id $sroot.compact
-	fi
-}
-
-function __save_settings {
-	echo $version > $sroot/version
-	if [ -n "$base" ]
-	then
-		echo $base_overlay:$id > $sroot/overlay
-	else
-		echo $id > $sroot/overlay
 	fi
 }
 
