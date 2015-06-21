@@ -1,2 +1,0 @@
-#!/bin/sh
-systemd-nspawn -nbj -D /var/lib/machines/$1.compact -M $1

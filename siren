@@ -1,6 +1,11 @@
 #!/bin/sh
 set -e
 
+USE_COMPACT=y
+USE_COMPACT=
+
+BUILD_COMPACT=$USE_COMPACT
+
 if [ $(basename "$0") = "siren" ]
 then
 	if [ -n "$1" ]
@@ -16,21 +21,48 @@ then
 				$path/build.sh
 				exit $? ;;
 			tag)
-				./siren-tag $2 $3
-				exit $? ;;
-			spawn)
-				./siren-spawn $2
-				exit $? ;;
+				ln -s $2 /var/lib/machines/$3
+				if [ -n "$BUILD_COMPACT" ]
+				then
+					ln -s $2.compact /var/lib/machines/$3.compact
+				fi
+				exit 0 ;;
+			prepare)
+				base=$2
+				cont=$3
+				base_overlay=$(cat /var/lib/machines/$base/overlay)
+				cd /var/lib/machines
+				if [ -n "$cont" ]
+				then
+					id=$cont
+					mkdir -p $id
+					if [ -n "$USE_COMPACT" ]
+					then
+						mount -t overlay overlay -olowerdir=$base.compact,upperdir=$id,workdir=.work $id
+					else
+						mount -t overlay overlay -olowerdir=$base_overlay,upperdir=$id,workdir=.work $id
+					fi
+				else
+					id=$base
+					if [ -n "$USE_COMPACT" ]
+					then
+						mount -B $base.compact $id && mount -o remount,ro $id
+					else
+						# TODO check for : in $base_overlay, and use mount -B if there is none.
+						echo "mount -t overlay overlay -olowerdir=$base_overlay $id"
+						mount -t overlay overlay -olowerdir=$base_overlay $id
+					fi
+				fi
+				exit 0 ;;
+			unprepare)
+				cd /var/lib/machines
+				umount $2
+				exit 0 ;;
 		esac
 	fi
-	echo "Usage: $0 build/tag/spawn"
+	echo "Usage: $0 build/tag/prepare/unprepare"
 	exit 1
 fi
-
-USE_COMPACT=y
-#USE_COMPACT=
-
-BUILD_COMPACT=$USE_COMPACT
 
 src=$( cd "$( dirname "$0" )" && pwd )
 cd $src
