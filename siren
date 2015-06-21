@@ -76,9 +76,11 @@ then
 				$path/build.sh
 				exit $? ;;
 			tag)
+				rm /var/lib/siren/$3
 				ln -s $2 /var/lib/siren/$3
 				if [ -n "$BUILD_COMPACT" ]
 				then
+					rm /var/lib/siren/$3.compact
 					ln -s $2.compact /var/lib/siren/$3.compact
 				fi
 				exit 0 ;;
