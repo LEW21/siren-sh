@@ -165,11 +165,38 @@ function FROM {
 }
 
 function RUN {
-	systemd-nspawn -M $id $@
+	echo systemd-nspawn --bind /var/cache/pacman/pkg/ -M $id "$@"
+	systemd-nspawn --bind /var/cache/pacman/pkg/ -M $id "$@"
+}
+
+function __sd_unit_name {
+	if [[ "$1" == *.service ]] || [[ "$1" == *.socket ]]
+	then
+		echo $1
+	else
+		echo $1.service
+	fi
+}
+
+function __sd_add_unit {
+	cp $1 $root/usr/lib/systemd/system/
+}
+
+function ADD_UNIT {
+	sd_name=$(__sd_unit_name $1)
+
+	__sd_add_unit $sd_name
 }
 
 function ENABLE {
-	RUN systemctl enable $1
+	sd_name=$(__sd_unit_name $1)
+
+	if [ -f $sd_name ]
+	then
+		__sd_add_unit $sd_name
+	fi
+
+	RUN systemctl enable $sd_name
 }
 
 function SET {
