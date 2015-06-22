@@ -224,7 +224,7 @@ function __save_settings {
 	echo $version > $sroot/version
 	if [ -n "$base" ]
 	then
-		echo $base_overlay:$id > $sroot/overlay
+		echo $id:$base_overlay > $sroot/overlay
 	else
 		echo $id > $sroot/overlay
 	fi
