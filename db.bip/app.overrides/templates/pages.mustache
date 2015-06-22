@@ -1,0 +1,37 @@
+<div id="wiki-wrapper" class="results">
+<div id="head" style="border:none;">
+  <h1>{{title}}</h1>
+  <ul class="actions">
+    {{#allow_editing}}
+      <li class="minibutton jaws">
+      <a href="#" id="minibutton-new-page">Nowy</a></li>
+    {{/allow_editing}}
+  </ul>
+</div>
+<div id="pages">
+
+{{#has_results}}
+  <div id="file-browser">
+    <div class="breadcrumb">
+      {{{breadcrumb}}}
+    </div>
+    <ul>
+      {{{files_folders}}}
+    </ul>
+  </div>
+{{/has_results}}
+
+{{#no_results}}
+  <p id="no-results">
+    There are no pages in <strong>{{ref}}</strong>.
+  </p>
+{{/no_results}}
+
+</div>
+<div id="footer">
+  <ul class="actions">
+    <li class="minibutton"><a href="#">Do góry</a></li>
+  </ul>
+</div>
+</div>
+

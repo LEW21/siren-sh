@@ -1,0 +1,9 @@
+- name: Janusz Lewandowski
+  email: janusz.lewandowski@db.org.pl
+  password_sha512: sha512-hashed password (as hexadecimal string)
+- name: Beata Dziudzik
+  email: beata.dziudzik@db.org.pl
+  password_sha512: sha512-hashed password (as hexadecimal string)
+- name: Adam Kotucha
+  email: adam.kotucha@db.org.pl
+  password_sha512: sha512-hashed password (as hexadecimal string)

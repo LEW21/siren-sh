@@ -1,0 +1,5 @@
+source 'https://rubygems.org'
+
+gem 'gollum'
+gem 'gollum-rugged_adapter'
+gem 'unicorn'

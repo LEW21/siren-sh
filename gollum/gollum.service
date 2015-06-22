@@ -1,0 +1,13 @@
+[Unit]
+Description=BIP
+After=network.target gollum.socket
+Requires=gollum.socket
+
+[Service]
+User=gollum
+EnvironmentFile=/gollum/conf
+Environment=UNICORN_FD=3
+ExecStart=/gollum/entrypoint.sh unicorn --host 0.0.0.0 --port 80
+
+[Install]
+WantedBy=multi-user.target

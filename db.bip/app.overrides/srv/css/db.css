@@ -1,0 +1,231 @@
+#topbar {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	background: #3dd4c7;
+	color: white;
+	z-index: 50;
+}
+
+#topbar * {
+	color: inherit;
+	text-decoration: inherit;
+}
+
+#topbar li {
+	float: left;
+	list-style-type: none;
+}
+
+#topbar li>* {
+	display: block;
+	height: 50px;
+	padding: 0 20px;
+	line-height: 50px;
+	font-size: 1.2em;
+	box-sizing: border-box;
+}
+
+#topbar li * {
+	vertical-align: middle;
+}
+
+#topbar #db_link, #topbar #bip_link {
+	padding: 0 10px;
+}
+
+#topbar li img {
+	height: 40px;
+}
+
+#topbar #db_link img {
+	height: 45px;
+}
+
+#topbar #bip_link img {
+	height: 40px;
+}
+
+#topbar a:hover {
+	background-color: hsla(0, 0%, 100%, 0.2);
+}
+
+body {
+	padding-top: 50px;
+}
+
+#topbar ul {
+	margin: 0 auto;
+	overflow: visible;
+	width: 100%;
+}
+
+@media all and (min-width: 940px) {
+	#topbar ul {
+		max-width: 920px;
+		padding-left:20px;
+		padding-right:20px;
+	}
+}
+
+#topbar #topsearch {
+	float: right;
+}
+
+#topbar #topsearch input, #topbar #topsearch button {
+	padding: 4px;
+	color: black;
+}
+
+#topbar #topsearch input {
+	width: 200px;
+}
+
+.markdown-body {
+	padding: 0;
+	overflow: initial;
+}
+
+@media all and (min-width: 940px) {
+	#wiki-toc-main {
+		float: right;
+		width: 30%;
+		font-size: 0.8em;
+		margin-left: 2em;
+	}
+	
+	#wiki-body {
+		float: none;
+		overflow: initial;
+	}
+}
+
+h1, h2, h3, h4, h5, h6 {
+	overflow: hidden;
+	font-family: "Open Sans", sans-serif;
+}
+
+#wiki-toc-main .toc {
+	font-size: 17px;
+}
+
+#wiki-toc-main ul {
+	margin-left: 0;
+	font-size: 0.9em;
+}
+
+#wiki-wrapper h1 {
+	color: #3dd4c7;
+}
+
+#wiki-wrapper h2 {
+	font-size: 1.5em;
+}
+
+#wiki-wrapper h3 {
+	font-size: 1.3em;
+	font-weight: normal;
+}
+
+#db-footer {
+	margin-top: 2em;
+	padding-top: 0.5em;
+	opacity: 0.5;
+	border-top: 3px solid #3dd4c7;
+}
+
+#db-footer:hover {
+	opacity: 1;
+}
+
+.admin-only {
+	opacity: 0.2;
+}
+
+.admin-only:hover {
+	opacity: 1;
+}
+
+a:link, a:hover, a:visited {
+	color: #3dd4c7;
+}
+
+.toc a {
+	color: #2B948B;
+}
+
+.minibutton a {
+	color: #333;
+}
+
+.page #footer {
+	margin-bottom: 3em;
+}
+
+#head {
+	overflow: initial;
+}
+
+#head::after { clear: both; content: ""; display: block; }
+
+#head .actions, #head .admin-submenu {
+	height: 28px;
+	overflow: visible;
+}
+
+#head .admin-submenu {
+	opacity: 0.5;
+}
+
+#head .admin-submenu:hover {
+	opacity: 1;
+}
+
+#head .menu {
+	position: relative;
+	width: 100px;
+	max-height: 200px;
+	overflow: hidden;
+	text-align: right;
+	padding: 10px 0;
+	background: -moz-linear-gradient(left,  rgba(255,255,255,0) 0%, rgba(255,255,255,0.6) 60%, rgba(255,255,255,1) 100%); /* FF3.6+ */
+	background: -webkit-gradient(linear, left top, right top, color-stop(0%,rgba(255,255,255,0)), color-stop(60%,rgba(255,255,255,0.6)), color-stop(100%,rgba(255,255,255,1))); /* Chrome,Safari4+ */
+	background: -webkit-linear-gradient(left,  rgba(255,255,255,0) 0%,rgba(255,255,255,0.6) 60%,rgba(255,255,255,1) 100%); /* Chrome10+,Safari5.1+ */
+	background: -o-linear-gradient(left,  rgba(255,255,255,0) 0%,rgba(255,255,255,0.6) 60%,rgba(255,255,255,1) 100%); /* Opera 11.10+ */
+	background: -ms-linear-gradient(left,  rgba(255,255,255,0) 0%,rgba(255,255,255,0.6) 60%,rgba(255,255,255,1) 100%); /* IE10+ */
+	background: linear-gradient(to right,  rgba(255,255,255,0) 0%,rgba(255,255,255,0.6) 60%,rgba(255,255,255,1) 100%); /* W3C */
+	filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00ffffff', endColorstr='#ffffff',GradientType=1 ); /* IE6-9 */
+}
+
+#head .menu li {
+	display: none;
+	float: none;
+}
+
+#head .menu > li > *:not(a), #head .menu li.menu-title {
+	margin: 0 10px;
+}
+
+#head .menu > li > a {
+	padding: 0 10px;
+	display: block;
+}
+
+#head .menu li.menu-title {
+	display: block;
+}
+
+#head .menu:hover {
+	z-index: 10;
+}
+
+#head .menu:hover li {
+	display: block;
+	margin-bottom: 0.2em;
+}
+
+#head .menu:hover li.menu-empty {
+	margin-bottom: 0;
+	border-bottom: 0;
+}
