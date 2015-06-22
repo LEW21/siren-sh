@@ -1,3 +1,6 @@
+[Unit]
+Description=Gollum Git-powered Wiki Socket
+
 [Socket]
 ListenStream=0.0.0.0:80
 

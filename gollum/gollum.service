@@ -1,5 +1,5 @@
 [Unit]
-Description=BIP
+Description=Gollum Git-powered Wiki
 After=network.target gollum.socket
 Requires=gollum.socket
 
