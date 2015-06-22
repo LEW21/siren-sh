@@ -64,4 +64,6 @@ MIT license.
 
 ## Requirements
 * Linux 4.0 (overlayfs with multiple read-only layers)
-* systemd 220 (I guess you could try with older one, but I don't know how will it end)
+* systemd 220 (219 has NAT support for containers, required for internet access when running (but not building) containers)
+* NO btrfs (Non-empty directory removal is bugged on overlayfs over btrfs. Use a good fs instead - eg. ext4.)
+* sysctl net.ipv4.ip_forward=1 (I don't know if it's always required, but on my local PC containers can't access internet without it)
