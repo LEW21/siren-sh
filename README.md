@@ -1,3 +1,5 @@
+This project is abandoned. See [siren](https://github.com/LEW21/siren) for a new version.
+
 # siren - systemd-nspawn container builder
 
 siren is a tiny and really fast (<3 overlayfs) tool for building OS containers for use with systemd-nspawn and machinectl.
